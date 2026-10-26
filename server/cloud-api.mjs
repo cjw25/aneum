@@ -1,12 +1,14 @@
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
 import {assess,validateSample} from './state.mjs';
 import {redisStore} from './redis-store.mjs';
+import {supabaseStore,supabaseConfiguration} from './supabase-store.mjs';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const equal=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const json=(res,status,value)=>{res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify(value));};
 const publicDevice=d=>({id:d.id,name:d.name,platform:d.platform,createdAt:d.createdAt,latest:d.latest,status:assess(d)});
 export function configured(env) {
-  return /^[a-f0-9]{64}$/.test(env.ANEUM_ADMIN_TOKEN||'') && !!env.UPSTASH_REDIS_REST_URL && !!env.UPSTASH_REDIS_REST_TOKEN;
+  const supabase=supabaseConfiguration(env);
+  return /^[a-f0-9]{64}$/.test(env.ANEUM_ADMIN_TOKEN||'') && ((!!supabase.url&&!!supabase.key)||(!!env.UPSTASH_REDIS_REST_URL&&!!env.UPSTASH_REDIS_REST_TOKEN));
 }
 async function readBody(req) {
   if(req.body!==undefined) {
@@ -30,7 +32,7 @@ export async function handleCloud(req,res,route,{env=process.env,store}={}) {
   if(!/^[a-f0-9]{64}$/.test(token))return json(res,401,{error:'연결 키를 확인해주세요'});
   if(route!=='report'&&!equal(token,env.ANEUM_ADMIN_TOKEN))return json(res,401,{error:'관리자 연결 키를 확인해주세요'});
   let storage;
-  try {storage=store||redisStore(env);}catch{return json(res,503,{error:'서버 저장소 설정을 확인해주세요'});}
+  try {const supabase=supabaseConfiguration(env);storage=store||(supabase.url&&supabase.key?supabaseStore(env):redisStore(env));}catch{return json(res,503,{error:'서버 저장소 설정을 확인해주세요'});}
   try {
     if(route==='devices'&&req.method==='GET')return json(res,200,{devices:(await storage.list()).map(publicDevice)});
     if(route==='devices'&&req.method==='POST') {
