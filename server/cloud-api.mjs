@@ -1,4 +1,5 @@
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
+import {Buffer} from 'node:buffer';
 import {assess,validateSample} from './state.mjs';
 import {redisStore} from './redis-store.mjs';
 import {supabaseStore,supabaseConfiguration} from './supabase-store.mjs';
@@ -8,7 +9,8 @@ const json=(res,status,value)=>{res.statusCode=status;res.setHeader('Content-Typ
 const publicDevice=d=>({id:d.id,name:d.name,platform:d.platform,createdAt:d.createdAt,latest:d.latest,status:assess(d)});
 export function configured(env) {
   const supabase=supabaseConfiguration(env);
-  return /^[a-f0-9]{64}$/.test(env.ANEUM_ADMIN_TOKEN||'') && ((!!supabase.url&&!!supabase.key)||(!!env.UPSTASH_REDIS_REST_URL&&!!env.UPSTASH_REDIS_REST_TOKEN));
+  const hasAdmin=/^[a-f0-9]{64}$/.test(env.ANEUM_ADMIN_TOKEN||'')||/^[a-f0-9]{64}$/.test(env.ANEUM_ADMIN_TOKEN_SHA256||'');
+  return hasAdmin && ((!!supabase.url&&!!supabase.key)||(!!env.UPSTASH_REDIS_REST_URL&&!!env.UPSTASH_REDIS_REST_TOKEN));
 }
 async function readBody(req) {
   if(req.body!==undefined) {
@@ -19,18 +21,32 @@ async function readBody(req) {
   let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>8192)throw Error('요청이 너무 큽니다');}
   return JSON.parse(raw||'{}');
 }
-export async function handleCloud(req,res,route,{env=process.env,store}={}) {
+export async function handleCloud(req,res,route,{env=process.env,store,fetcher=fetch}={}) {
   res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
   // Never trust a supplied Origin to choose an upstream or a redirect.
   if(req.headers.origin) {
     let origin;try{origin=new URL(req.headers.origin);}catch{return json(res,403,{error:'허용되지 않은 요청입니다'});}
     if(origin.protocol!=='https:'||origin.host!==req.headers.host)return json(res,403,{error:'다른 사이트에서의 요청은 허용되지 않습니다'});
   }
+  if(env.ANEUM_BACKEND_URL){
+    try{
+      const base=new URL(env.ANEUM_BACKEND_URL);
+      if(base.protocol!=='https:'||!base.hostname.endsWith('.supabase.co')||base.username||base.password||base.search||base.hash||base.pathname.replace(/\/$/,'')!=='/functions/v1/aneum-api')throw Error('Invalid backend');
+      const methods={status:['GET'],devices:['GET','POST'],device:['DELETE'],report:['POST']};
+      if(!methods[route]?.includes(req.method))return json(res,405,{error:'지원하지 않는 요청입니다'});
+      const destination=new URL(base.href.replace(/\/$/,'')+'/'+route);
+      if(route==='device')destination.search=new URL(req.url,'https://localhost').search;
+      let payload;try{if(req.method==='POST')payload=await readBody(req);}catch{return json(res,400,{error:'올바른 JSON 요청을 보내주세요'});}
+      const upstream=await fetcher(destination,{method:req.method,headers:{Authorization:req.headers.authorization||'','Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload),signal:AbortSignal.timeout(20000)});
+      const data=await upstream.json();return json(res,upstream.status,data);
+    }catch{return json(res,503,{error:'안음 수집 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.'});}
+  }
   if(route==='status'&&req.method==='GET') return json(res,200,{mode:configured(env)?'live':'setup_required'});
   if(!configured(env))return json(res,503,{error:'실제 기기 연결을 위한 서버 인증과 영구 저장소 설정이 필요합니다.'});
   const token=(req.headers.authorization||'').replace(/^Bearer /,'');
   if(!/^[a-f0-9]{64}$/.test(token))return json(res,401,{error:'연결 키를 확인해주세요'});
-  if(route!=='report'&&!equal(token,env.ANEUM_ADMIN_TOKEN))return json(res,401,{error:'관리자 연결 키를 확인해주세요'});
+  const adminMatches=env.ANEUM_ADMIN_TOKEN_SHA256?equal(hash(token),env.ANEUM_ADMIN_TOKEN_SHA256):equal(token,env.ANEUM_ADMIN_TOKEN||'');
+  if(route!=='report'&&!adminMatches)return json(res,401,{error:'관리자 연결 키를 확인해주세요'});
   let storage;
   try {const supabase=supabaseConfiguration(env);storage=store||(supabase.url&&supabase.key?supabaseStore(env):redisStore(env));}catch{return json(res,503,{error:'서버 저장소 설정을 확인해주세요'});}
   try {

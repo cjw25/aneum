@@ -1,6 +1,18 @@
 # 기존 Supabase 프로젝트 연결
 
-현재 상태: 서버 어댑터·마이그레이션 SQL 준비 및 자동 테스트 완료. 실제 프로젝트 연결·SQL 적용·실제 저장 검증은 아직 수행하지 않았습니다.
+2026-10-26: 기존 `aneum` 프로젝트(`rdyhsogqouihtziwycjm`)에 테이블·함수를 적용하고 Supabase Edge API의 실제 등록·저장·조회·삭제·키 폐기 검증을 통과했습니다. 시험 기록은 삭제했습니다. 자동 테스트 27개도 통과했습니다.
+
+## 현재 운영 연결
+
+`브라우저/휴대폰 → Vercel /api → Supabase aneum-api Edge Function → Postgres`
+
+Vercel에는 비밀이 아닌 `ANEUM_BACKEND_URL=https://rdyhsogqouihtziwycjm.supabase.co/functions/v1/aneum-api`만 설정합니다. Supabase 비밀 키는 내부 함수의 기본 환경변수에서 읽으며 외부로 복사하지 않습니다. `SUPABASE_SECRET_KEYS`의 `default`를 우선 사용하고 없으면 기본 legacy 서버 키를 사용합니다.
+
+안음 관리자 키 원문은 로컬에만 보관하고, 데이터베이스에는 SHA-256 검증값만 저장했습니다. 기기별 키도 해시만 저장합니다. Edge Function은 안음 키로 자체 인증하므로 JWT 게이트는 사용하지 않습니다. 원래 관리자 키를 계속 사용할 수 있습니다.
+
+관리자 설정 테이블은 `public.aneum_backend_settings`이며 서버만 조회할 수 있습니다. RLS는 두 테이블 모두 활성화했고 `anon`·`authenticated`의 테이블 권한은 없습니다. 보안 검사에서 [정책 없는 RLS 안내](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)가 나오며, 이는 공개 클라이언트 접근을 허용하지 않는 현재 서버 전용 접근 구조의 의도된 상태입니다.
+
+아래 직접 연결 방식은 별도의 서버에서 Supabase REST를 호출할 때 사용할 수 있는 대안입니다. 현재 Vercel 배포에서는 필요하지 않습니다.
 
 ## 사용할 프로젝트에서 확인할 것
 
@@ -35,4 +47,4 @@ Supabase secret을 화면의 관리자 입력란에 넣지 마세요. 서버 환
 5. 시험 기록 삭제 및 삭제된 기기 키의 재사용 거부 확인
 6. 이후 부모님 휴대폰 앱의 실제 장시간 자동 수집 검증
 
-자동 테스트 22개 통과는 실제 Supabase 연결 성공을 의미하지 않습니다. 테스트용 데이터는 실제 부모님 활동으로 표시하거나 남겨두지 않습니다.
+실제 서버 연결 검증도 완료했습니다. 테스트용 데이터는 실제 부모님 활동으로 표시하거나 남겨두지 않았습니다. 부모님 휴대폰 설치 및 장시간 자동 수집 검증은 별도로 필요합니다.

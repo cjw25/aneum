@@ -10,3 +10,6 @@ node_modules/
 .env.*
 !.env.example
 work/
+supabase/.temp/
+
+.env*

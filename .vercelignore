@@ -3,6 +3,7 @@ data/
 android/
 ios/
 work/
+supabase/.temp/
 .env
 .env.*
 !.env.example
