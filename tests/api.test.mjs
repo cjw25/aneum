@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=fileURLToPath(new URL('../',import.meta.url));
 test('enrollment, authentic reporting, revocation and private APIs',async()=>{
- const scratch=path.resolve(root,'../../work');await mkdir(scratch,{recursive:true});
+ const scratch=path.resolve(root,'work');await mkdir(scratch,{recursive:true});
  const dir=await mkdtemp(path.join(scratch,'aneum-api-'));
  const child=spawn(process.execPath,['server/server.mjs'],{cwd:root,env:{...process.env,PORT:'0',ANEUM_DATA_DIR:dir},stdio:['ignore','pipe','pipe']});
  try {

@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s);
-let demo=false,token=sessionStorage.getItem('aneum-admin')||'';
+let demo=false,deploymentPreview=false,token=sessionStorage.getItem('aneum-admin')||'';
 $('#admin').value=token;
 $('#date').textContent=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'long',day:'numeric',weekday:'long'}).format(new Date());
 const time=t=>t?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}).format(t):'아직 없음';
@@ -8,7 +8,21 @@ function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefine
 function examples(){const n=Date.now();return [{id:'demo1',name:'엄마',platform:'android',latest:{activityCount:8,windowEnd:n,receivedAt:n-5*60_000,signal:'usage'},status:{kind:'active',label:'오늘 활동 확인',detail:'오늘 휴대폰 사용 기록이 있어요.'}},{id:'demo2',name:'아빠',platform:'ios',latest:{activityCount:0,windowEnd:n-3*3600_000,receivedAt:n-3*3600_000,signal:'steps'},status:{kind:'stale',label:'정보 갱신 지연',detail:'최근 정보가 도착하지 않아 활동 여부를 판단하기 어려워요.'}}];}
 function render(devices){$('#count').textContent=devices.length;$('#cards').replaceChildren();if(!devices.length){$('#cards').append(el('div','아직 연결된 가족이 없어요.\n아래에서 확인 화면을 연결하고 휴대폰을 등록해주세요.','empty'));return;}for(const d of devices){const card=el('article',undefined,'card'),top=el('div',undefined,'card-top');top.append(el('div',d.name.slice(0,1),'avatar'));const who=el('div');who.append(el('h3',d.name),el('span',d.platform==='ios'?'아이폰 · 걸음 기록':'갤럭시 · 휴대폰 사용 기록','device'));top.append(who);card.append(top,el('span',d.status.label,'badge '+d.status.kind),el('p',d.status.detail,'detail'));const facts=el('div',undefined,'facts');const latest=d.latest;const rows=[['활동 기록 범위 끝',time(latest?.windowEnd)],['서버가 받은 시각',time(latest?.receivedAt)],['오늘 수집된 활동',!latest||latest.permissionGranted===false||latest.measurementError?'확인 불가':latest.activityCount+(d.platform==='ios'?'걸음':'회 (사용 이벤트)')]];for(const [a,b] of rows){const row=el('div',undefined,'fact');row.append(el('span',a),el('strong',b));facts.append(row);}card.append(facts);if(!demo){const remove=el('button','연결 해제 및 기록 삭제','remove');remove.onclick=async()=>{if(!confirm(d.name+' 연결과 기록을 삭제할까요?'))return;try{await api('devices/'+d.id,'DELETE');await refresh();}catch(e){$('#error').textContent=e.message;}};card.append(remove);}$('#cards').append(card);}}
 async function refresh(){ $('#error').textContent='';if(demo){render(examples());return;}if(!token){render([]);return;}try{const d=await api('devices');render(d.devices);$('#authStatus').textContent='확인 화면이 연결됐어요.';}catch(e){$('#error').textContent=e.message;render([]);}}
-$('#demo').onclick=()=>{demo=!demo;$('#demo').textContent=demo?'실제 수집 화면으로':'예시 화면 보기';$('#banner').textContent=demo?'예시 모드 · 아래 가족과 활동은 모두 가상 데이터입니다.':'실제 수집 모드 · 연결된 휴대폰이 보내온 정보만 표시합니다.';$('#banner').classList.toggle('demo',demo);$('#enroll').querySelector('button').disabled=demo;refresh();};
+$('#demo').onclick=()=>{if(deploymentPreview)return;demo=!demo;$('#demo').textContent=demo?'실제 수집 화면으로':'예시 화면 보기';$('#banner').textContent=demo?'예시 모드 · 아래 가족과 활동은 모두 가상 데이터입니다.':'실제 수집 모드 · 연결된 휴대폰이 보내온 정보만 표시합니다.';$('#banner').classList.toggle('demo',demo);$('#enroll').querySelector('button').disabled=demo;refresh();};
 $('#auth').onsubmit=async e=>{e.preventDefault();token=$('#admin').value.trim();sessionStorage.setItem('aneum-admin',token);await refresh();};
 $('#enroll').onsubmit=async e=>{e.preventDefault();if(demo)return;const btn=e.target.querySelector('button');btn.disabled=true;try{const d=await api('devices','POST',{name:$('#name').value,platform:$('#platform').value});$('#keyValue').textContent=d.deviceToken;$('#deviceKey').hidden=false;$('#name').value='';await refresh();}catch(err){$('#error').textContent=err.message;}finally{btn.disabled=false;}};
-$('#closeKey').onclick=()=>{$('#keyValue').textContent='';$('#deviceKey').hidden=true;};$('#refresh').onclick=refresh;setInterval(refresh,30_000);if(new URLSearchParams(location.search).get('demo')==='1')$('#demo').click();else refresh();
+$('#closeKey').onclick=()=>{$('#keyValue').textContent='';$('#deviceKey').hidden=true;};$('#refresh').onclick=refresh;setInterval(refresh,30_000);
+async function bootstrap(){
+ try{
+  const response=await fetch('/api/status');
+  if(response.ok&&(await response.json()).mode==='preview'){
+   deploymentPreview=true;demo=true;$('#demo').hidden=true;
+   $('#banner').textContent='공개 예시 · 아래 가족과 활동은 모두 가상 데이터입니다. 실제 휴대폰은 연결되어 있지 않습니다.';$('#banner').classList.add('demo');
+   $('#connect h2').textContent='가족 연결 기능은 준비 중이에요';
+   $('#connect p').textContent='현재는 화면을 살펴보는 예시 버전입니다. 서버 인증과 영구 저장소를 연결한 뒤 실제 가족을 등록할 수 있어요.';
+   $('#connect .forms').hidden=true;refresh();return;
+  }
+ }catch{}
+ if(new URLSearchParams(location.search).get('demo')==='1')$('#demo').click();else refresh();
+}
+bootstrap();

@@ -5,3 +5,8 @@ android/**/build/
 ios/*.xcodeproj/
 ios/DerivedData/
 node_modules/
+.vercel/
+.env
+.env.*
+!.env.example
+work/

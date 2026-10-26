@@ -1,0 +1,8 @@
+.git/
+data/
+android/
+ios/
+work/
+.env
+.env.*
+!.env.example
