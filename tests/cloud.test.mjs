@@ -12,8 +12,8 @@ function memoryStore(){const rows=new Map();return {
  list:async()=>[...rows.values()],create:async d=>{rows.set(d.id,d);return true;},remove:async id=>{rows.delete(id);},
  report:async(id,hash,sample)=>{const d=rows.get(id);if(!d||d.tokenHash!==hash)return -1;if(d.latest&&sample.windowEnd<d.latest.windowEnd)return 0;d.latest=sample;return 1;}
 };}
-test('unconfigured deployment explicitly reports preview and blocks enrollment',async()=>{
- assert.equal((await request('status',{configuration:{}})).body.mode,'preview');
+test('unconfigured deployment explicitly reports setup required and blocks enrollment',async()=>{
+ assert.equal((await request('status',{configuration:{}})).body.mode,'setup_required');
  assert.equal((await request('devices',{configuration:{},method:'POST',body:{name:'엄마'}})).statusCode,503);
 });
 test('cloud APIs enforce administrator authentication and same-origin requests',async()=>{

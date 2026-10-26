@@ -8,4 +8,4 @@ if errorlevel 1 (
 )
 start "Aneum local server" /D "%~dp0" node server/server.mjs
 timeout /t 2 /nobreak >nul
-start "" "http://127.0.0.1:8787/?demo=1"
+start "" "http://127.0.0.1:8787/"

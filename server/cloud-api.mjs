@@ -24,8 +24,8 @@ export async function handleCloud(req,res,route,{env=process.env,store}={}) {
     let origin;try{origin=new URL(req.headers.origin);}catch{return json(res,403,{error:'허용되지 않은 요청입니다'});}
     if(origin.protocol!=='https:'||origin.host!==req.headers.host)return json(res,403,{error:'다른 사이트에서의 요청은 허용되지 않습니다'});
   }
-  if(route==='status'&&req.method==='GET') return json(res,200,{mode:configured(env)?'live':'preview'});
-  if(!configured(env))return json(res,503,{error:'이 배포는 예시 화면입니다. 실제 연결에는 서버 인증과 영구 저장소 설정이 필요합니다.'});
+  if(route==='status'&&req.method==='GET') return json(res,200,{mode:configured(env)?'live':'setup_required'});
+  if(!configured(env))return json(res,503,{error:'실제 기기 연결을 위한 서버 인증과 영구 저장소 설정이 필요합니다.'});
   const token=(req.headers.authorization||'').replace(/^Bearer /,'');
   if(!/^[a-f0-9]{64}$/.test(token))return json(res,401,{error:'연결 키를 확인해주세요'});
   if(route!=='report'&&!equal(token,env.ANEUM_ADMIN_TOKEN))return json(res,401,{error:'관리자 연결 키를 확인해주세요'});
