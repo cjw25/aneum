@@ -30,9 +30,9 @@ async function refresh(){
  $('#error').textContent='';if(!serverReady||!token){render([]);return;}
  try{const d=await api('devices');render(d.devices);$('#authStatus').textContent='확인 화면이 연결됐어요.';}catch(e){$('#error').textContent=e.message;render([]);}
 }
-$('#auth').onsubmit=async e=>{e.preventDefault();token=$('#admin').value.trim();sessionStorage.setItem('aneum-admin',token);await refresh();};
+$('#auth').onsubmit=async e=>{e.preventDefault();if(!serverReady){$('#authStatus').textContent='서버 관리자 키와 데이터 저장소 설정이 아직 완료되지 않았어요. 설정 후 다시 연결해주세요.';return;}token=$('#admin').value.trim();sessionStorage.setItem('aneum-admin',token);await refresh();};
 $('#enroll').onsubmit=async e=>{
- e.preventDefault();if(!serverReady)return;const btn=e.target.querySelector('button');btn.disabled=true;
+ e.preventDefault();if(!serverReady){$('#authStatus').textContent='휴대폰 연결 키를 발급하려면 서버 관리자 키와 데이터 저장소 설정이 필요해요.';return;}const btn=e.target.querySelector('button');btn.disabled=true;
  try{const d=await api('devices','POST',{name:$('#name').value,platform:$('#platform').value});$('#keyValue').textContent=d.deviceToken;$('#deviceKey').hidden=false;$('#name').value='';await refresh();}catch(err){$('#error').textContent=err.message;}finally{btn.disabled=false;}
 };
 $('#closeKey').onclick=()=>{$('#keyValue').textContent='';$('#deviceKey').hidden=true;};$('#refresh').onclick=refresh;
@@ -42,9 +42,9 @@ async function bootstrap(){
   if(response.ok&&(await response.json()).mode!=='live'){
    serverReady=false;
    $('#banner').textContent='연결 대기 · 서버 연결 설정이 필요합니다. 아직 수집된 활동 정보가 없습니다.';
-   $('#connect h2').textContent='가족 연결을 준비하고 있어요';
-   $('#connect p').textContent='서버 연결 설정이 완료되면 부모님 휴대폰을 등록할 수 있어요. 실제 기기의 활동 기록만 표시합니다.';
-   $('#connect .forms').hidden=true;
+   $('#connect h2').textContent='연결 키로 가족을 연결해요';
+   $('#connect p').textContent='관리자 키를 입력하고 휴대폰 연결 키를 발급할 수 있어요. 현재는 서버 관리자 키와 데이터 저장소 설정이 먼저 필요합니다.';
+   $('#authStatus').textContent='현재 서버 연결 설정이 필요합니다. 입력 화면은 계속 사용할 수 있어요.';
   }
  }catch{serverReady=false;$('#banner').textContent='서버에 연결하지 못했어요. 연결 상태를 확인해주세요.';}
  await refresh();setInterval(refresh,30_000);
