@@ -1,0 +1,7 @@
+data/
+android/.gradle/
+android/local.properties
+android/**/build/
+ios/*.xcodeproj/
+ios/DerivedData/
+node_modules/

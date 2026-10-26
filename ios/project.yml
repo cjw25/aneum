@@ -1,0 +1,31 @@
+name: AneumPilot
+options:
+  bundleIdPrefix: kr.aneum
+  deploymentTarget:
+    iOS: '16.0'
+targets:
+  AneumPilot:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: kr.aneum.pilot
+        SWIFT_VERSION: '5.0'
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Info.plist
+        TARGETED_DEVICE_FAMILY: '1,2'
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: '안음 · 시험 앱'
+        UILaunchScreen: {}
+        NSMotionUsageDescription: '가족에게 오늘의 활동 여부를 전하기 위해 걸음 수를 확인합니다.'
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [kr.aneum.pilot.refresh]
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            localhost:
+              NSExceptionAllowsInsecureHTTPLoads: true
