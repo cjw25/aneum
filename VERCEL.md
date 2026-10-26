@@ -1,5 +1,11 @@
 # Vercel 배포
 
+## 현재 Supabase 연결 완료
+
+2026-10-26, Production 배포 `dpl_6Pcp97G6dxs4xB5gpb8YxPuMxkp1`에서 기존 Supabase `aneum` 프로젝트 연결을 검증했습니다. 현재 서버 설정은 `ANEUM_BACKEND_URL`이며, Supabase 내부 Edge Function이 데이터베이스에 접근합니다. 비밀 데이터베이스 키를 Vercel이나 GitHub로 복사하지 않았습니다.
+
+웹 화면과 API에서 실제 관리자 인증, 기기 등록·키 발급, 저장·조회·삭제·키 폐기 검증이 통과했습니다. 시험 기록은 제거했습니다. 상세 구조는 [SUPABASE.md](SUPABASE.md)를 참고하세요. 아래의 직접 Redis 설정은 이전 방식이자 대안입니다.
+
 2026-10-26, `Jeong` (`jeong13`) 계정의 `aneum` 프로젝트에 첫 배포 완료.
 
 - 확인 화면: https://aneum.vercel.app
