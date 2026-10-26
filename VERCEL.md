@@ -1,5 +1,14 @@
 # Vercel 배포
 
+2026-10-26, `Jeong` (`jeong13`) 계정의 `aneum` 프로젝트에 첫 배포 완료.
+
+- 예시 화면: https://aneum.vercel.app
+- 관리 화면: https://vercel.com/jeong13/aneum
+- 프로젝트 ID: `prj_rS9e18blkcol3hrob4KVfuZcoZGm`
+- 배포 ID: `dpl_4JbrM6Xy841hJcByo7XUm9ccAEx2`
+
+현재 배포는 로컬 소스를 Vercel CLI로 직접 업로드했습니다. 비공개 GitHub 저장소를 Vercel이 읽을 권한이 없어 Git 자동 배포 연결은 완료되지 않았습니다. 자동 배포를 사용하려면 GitHub에서 Vercel 앱에 `cjw25/aneum` 저장소 접근을 허용한 뒤 연결해야 합니다. GitHub 저장소의 공개 범위는 변경하지 않았습니다.
+
 ## 배포 구성
 
 - Framework: Other (`null`)
