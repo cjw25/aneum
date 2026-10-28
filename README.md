@@ -1,5 +1,18 @@
 # 안음 — 자동 안부 확인 시험 앱
 
+## 2026-10-28: 요청 지표에 맞춘 시험 버전 0.2
+
+갤럭시의 첫 화면 켜짐·첫 잠금 해제 시각, 각각의 하루 횟수, 선택적 통화기록 집계를 구현했습니다. 이전의 앱 전환 횟수와 아이폰 걸음 수를 이 지표로 대신 표시하지 않습니다. 아이폰은 요청 지표에 ‘지원 안 됨’을 표시합니다. 상세한 가능 범위·측정 정의·배포 제한·실기기 시험 절차는 [METRICS-VERIFICATION.md](METRICS-VERIFICATION.md)에 정리했습니다. 아래의 0.1 버전 설명보다 이 절이 우선합니다.
+
+Android 9 이상에서 `usageDebug`(화면·잠금 해제)와 `callTrialDebug`(추가 통화기록 시험)를 빌드합니다. `callTrialDebug`는 직접 설치 시험용이며 Play 배포 승인을 받은 앱이 아닙니다. 새 집계 코드를 설치하기 전의 데이터는 웹 화면에서 ‘이전 버전 · 미수집’으로 표시합니다.
+
+```powershell
+cd android
+gradle testUsageDebugUnitTest testCallTrialDebugUnitTest assembleUsageDebug assembleCallTrialDebug
+```
+
+프로젝트의 GitHub Actions `Android collection verification`에서도 두 빌드와 단위 테스트를 실행합니다. 설치 후 실제 기기에서 화면·잠금 해제·통화 횟수를 직접 대조하는 단계는 별도로 필요합니다.
+
 부모님이 처음 한 번 동의·설정한 뒤, 휴대폰이 수집한 활동 신호를 가족 확인 화면에 보내는 기술 검증용 프로젝트입니다. **완성된 안부 서비스나 설치가 검증된 앱이 아닙니다.**
 
 ## 지금 실행할 수 있는 것

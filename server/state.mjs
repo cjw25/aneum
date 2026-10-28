@@ -22,6 +22,7 @@ export function validateSample(body, platform, now = Date.now()) {
   if(body.schemaVersion!==2)throw Error('지원하지 않는 측정 버전');
   const {usageStatus,callStatus}=body;
   if(!['available','permission_denied','unsupported','error'].includes(usageStatus)||!['available','permission_denied','unsupported','not_enabled','error'].includes(callStatus))throw Error('잘못된 수집 상태');
+  if(permissionGranted!==(usageStatus!=='permission_denied')||measurementError!==(usageStatus==='error'))throw Error('수집 상태와 권한 플래그가 일치하지 않습니다');
   const count=name=>{const value=body[name];if(value!==null&&(!Number.isSafeInteger(value)||value<0||value>1_000_000))throw Error('잘못된 집계');return value;};
   const timestamp=name=>{const value=body[name];if(value!==null&&(!Number.isSafeInteger(value)||value<windowStart||value>windowEnd))throw Error('잘못된 활동 시각');return value;};
   const screenOnCount=count('screenOnCount'),unlockCount=count('unlockCount');
