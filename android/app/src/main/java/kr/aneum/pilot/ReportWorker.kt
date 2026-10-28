@@ -5,6 +5,9 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Process
+import android.Manifest
+import android.content.pm.PackageManager
+import android.provider.CallLog
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
@@ -34,26 +37,51 @@ class ReportWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                 timeInMillis = now; set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
             }.timeInMillis
             val permission = allowed(applicationContext)
-            var count = 0
+            var summary: UsageSummary? = null
             var measurementError = false
             if (permission) {
                 try {
                     val manager = applicationContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-                    // Foreground transitions, not calls, texts, or confirmed unlocks.
+                    // Screen-interactive and keyguard transitions are separate measures.
                     val events = manager.queryEvents(start, now)
                     if (events == null) measurementError = true
                     else {
+                        val collected = UsageSummary(start, now)
                         val event = UsageEvents.Event()
                         while (events.hasNextEvent()) {
                             events.getNextEvent(event)
-                            @Suppress("DEPRECATION")
-                            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND && event.packageName != applicationContext.packageName) count++
+                            collected.accept(event.eventType, event.timeStamp)
+                        }
+                        summary = collected
+                    }
+                } catch (_: Exception) { measurementError = true; summary = null }
+            }
+            var callStatus = if (BuildConfig.ENABLE_CALL_LOG) "permission_denied" else "not_enabled"
+            var incoming: Int? = null; var outgoing: Int? = null; var missed: Int? = null
+            if (BuildConfig.ENABLE_CALL_LOG && applicationContext.checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED) {
+                try {
+                    applicationContext.contentResolver.query(CallLog.Calls.CONTENT_URI, arrayOf(CallLog.Calls.TYPE),
+                        "${CallLog.Calls.DATE} >= ? AND ${CallLog.Calls.DATE} <= ?", arrayOf(start.toString(), now.toString()), null).use { cursor ->
+                        if (cursor == null) { callStatus = "error" }
+                        else {
+                            var inc = 0; var out = 0; var miss = 0
+                            while (cursor.moveToNext()) when (cursor.getInt(0)) {
+                                CallLog.Calls.INCOMING_TYPE -> inc++
+                                CallLog.Calls.OUTGOING_TYPE -> out++
+                                CallLog.Calls.MISSED_TYPE -> miss++
+                            }
+                            incoming = inc; outgoing = out; missed = miss; callStatus = "available"
                         }
                     }
-                } catch (_: Exception) { measurementError = true; count = 0 }
+                } catch (_: Exception) { callStatus = "error"; incoming = null; outgoing = null; missed = null }
             }
+            fun value(v: Any?): Any = v ?: JSONObject.NULL
             val payload = JSONObject().put("windowStart", start).put("windowEnd", now)
-                .put("activityCount", count).put("permissionGranted", permission).put("measurementError", measurementError)
+                .put("schemaVersion", 2).put("activityCount", summary?.screenOnCount ?: 0).put("permissionGranted", permission).put("measurementError", measurementError)
+                .put("usageStatus", if (!permission) "permission_denied" else if (measurementError) "error" else "available")
+                .put("firstScreenOnAt", value(summary?.firstScreenOnAt)).put("firstUnlockAt", value(summary?.firstUnlockAt))
+                .put("screenOnCount", value(summary?.screenOnCount)).put("unlockCount", value(summary?.unlockCount))
+                .put("callStatus", callStatus).put("incomingCallCount", value(incoming)).put("outgoingCallCount", value(outgoing)).put("missedCallCount", value(missed))
             if (!prefs.getBoolean("consent", false)) return@withContext Result.success()
             val connection = URL("$endpoint/api/report").openConnection() as HttpURLConnection
             try {

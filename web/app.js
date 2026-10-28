@@ -1,3 +1,4 @@
+import {metricRows} from './metrics.js';
 const $=s=>document.querySelector(s);
 let token=sessionStorage.getItem('aneum-admin')||'';
 let serverReady=true;
@@ -15,10 +16,10 @@ function render(devices){
  for(const d of devices){
   const card=el('article',undefined,'card'),top=el('div',undefined,'card-top');
   top.append(el('div',d.name.slice(0,1),'avatar'));
-  const who=el('div');who.append(el('h3',d.name),el('span',d.platform==='ios'?'아이폰 · 걸음 기록':'갤럭시 · 휴대폰 사용 기록','device'));top.append(who);
+  const who=el('div');who.append(el('h3',d.name),el('span',d.platform==='ios'?'아이폰 · 요청 항목 지원 제한':'갤럭시 · 화면·잠금 해제·통화','device'));top.append(who);
   card.append(top,el('span',d.status.label,'badge '+d.status.kind),el('p',d.status.detail,'detail'));
   const facts=el('div',undefined,'facts'),latest=d.latest;
-  const rows=[['활동 기록 범위 끝',time(latest?.windowEnd)],['서버가 받은 시각',time(latest?.receivedAt)],['오늘 수집된 활동',!latest||latest.permissionGranted===false||latest.measurementError?'확인 불가':latest.activityCount+(d.platform==='ios'?'걸음':'회 (사용 이벤트)')]];
+  const rows=[...metricRows(latest,time),['측정 범위 끝',time(latest?.windowEnd)],['서버가 받은 시각',time(latest?.receivedAt)]];
   for(const [a,b] of rows){const row=el('div',undefined,'fact');row.append(el('span',a),el('strong',b));facts.append(row);}
   card.append(facts);
   const remove=el('button','연결 해제 및 기록 삭제','remove');

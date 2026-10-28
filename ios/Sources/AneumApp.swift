@@ -1,6 +1,5 @@
 import SwiftUI
 import BackgroundTasks
-import CoreMotion
 import Security
 
 enum ConnectionKey {
@@ -32,7 +31,6 @@ enum PilotError: LocalizedError {
     static let shared = Monitor()
     @Published var status = "아직 전송 기록이 없어요."
     @Published var busy = false
-    private let pedometer = CMPedometer()
     private var generation = 0
     static let taskID = "kr.aneum.pilot.refresh"
     func schedule() {
@@ -60,27 +58,16 @@ enum PilotError: LocalizedError {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
         let start = calendar.startOfDay(for: end)
-        var count = 0
-        var failed = false
-        let authorization = CMPedometer.authorizationStatus()
-        var permission = authorization != .denied && authorization != .restricted
-        if permission && CMPedometer.isStepCountingAvailable() {
-            do {
-                let steps: Int = try await withCheckedThrowingContinuation { continuation in
-                    pedometer.queryPedometerData(from: start, to: end) { data, error in
-                        if let error = error { continuation.resume(throwing: error) }
-                        else if let data = data { continuation.resume(returning: data.numberOfSteps.intValue) }
-                        else { continuation.resume(throwing: PilotError.message("걸음 기록이 없어요")) }
-                    }
-                }
-                count = steps
-            } catch {
-                permission = CMPedometer.authorizationStatus() == .authorized
-                failed = permission
-            }
-        } else if permission { failed = true }
         guard !Task.isCancelled, currentGeneration == generation, UserDefaults.standard.bool(forKey: "consent") else { return false }
-        let payload: [String: Any] = ["windowStart": Int64(start.timeIntervalSince1970 * 1000), "windowEnd": Int64(end.timeIntervalSince1970 * 1000), "activityCount": count, "permissionGranted": permission, "measurementError": failed]
+        let payload: [String: Any] = [
+            "schemaVersion": 2, "windowStart": Int64(start.timeIntervalSince1970 * 1000),
+            "windowEnd": Int64(end.timeIntervalSince1970 * 1000), "activityCount": 0,
+            "permissionGranted": true, "measurementError": false,
+            "usageStatus": "unsupported", "callStatus": "unsupported",
+            "firstScreenOnAt": NSNull(), "firstUnlockAt": NSNull(),
+            "screenOnCount": NSNull(), "unlockCount": NSNull(),
+            "incomingCallCount": NSNull(), "outgoingCallCount": NSNull(), "missedCallCount": NSNull()
+        ]
         do {
             var request = URLRequest(url: url)
             request.httpMethod = "POST"; request.timeoutInterval = 20
@@ -126,7 +113,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
 struct ContentView: View {
     @StateObject private var monitor = Monitor.shared
-    @State private var server = UserDefaults.standard.string(forKey: "server") ?? "http://localhost:8787"
+    @State private var server = UserDefaults.standard.string(forKey: "server") ?? "https://aneum.vercel.app"
     @State private var key = ""
     @State private var consent = UserDefaults.standard.bool(forKey: "consent")
     var body: some View {
@@ -134,8 +121,8 @@ struct ContentView: View {
             Form {
                 Section {
                     Text("처음 한 번 연결하면, 일상은 그대로").font(.title2).bold()
-                    Text("오늘 걸음 수와 측정 범위, 권한 상태를 서버로 보냅니다. 휴대폰 잠금 해제·통화·문자 기록은 수집하지 않습니다.")
-                    Text("걸음 기록은 휴대폰 사용 여부나 안전을 보장하지 않습니다. 아이폰이 자동 전송을 지연하거나 실행하지 않을 수 있습니다.").font(.footnote).foregroundStyle(.secondary)
+                    Text("이 아이폰 버전은 첫 화면 사용 시각·하루 사용 횟수·통화 횟수를 자동 수집하지 못합니다. 연결 상태와 지원 여부만 전송합니다.")
+                    Text("걸음 수를 휴대폰 사용 기록으로 대신 표시하지 않습니다. 아이폰 지원 검증은 별도로 필요합니다.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("가족 연결") {
                     TextField("서버 주소", text: $server).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)

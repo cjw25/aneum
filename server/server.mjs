@@ -25,7 +25,7 @@ const server=http.createServer((req,res)=>{queue=queue.then(async()=>{
  const url=new URL(req.url,'http://localhost');
  if (!['127.0.0.1','localhost','[::1]'].includes((req.headers.host||'').split(/:(?=\d+$)/)[0])) return json(res,403,{error:'허용되지 않은 호스트'});
  if(req.headers.origin && req.headers.origin!==`http://${req.headers.host}`) return json(res,403,{error:'다른 사이트에서의 요청은 허용되지 않습니다'});
- if(req.method==='GET'&&['/','/app.js','/style.css'].includes(url.pathname)) {
+ if(req.method==='GET'&&['/','/app.js','/metrics.js','/style.css'].includes(url.pathname)) {
   const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html; charset=utf-8':file.endsWith('js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');return res.end(await readFile(path.join(base,'../web',file)));
  }
  if(!url.pathname.startsWith('/api/'))return json(res,404,{error:'찾을 수 없습니다'});

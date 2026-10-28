@@ -21,7 +21,6 @@ targets:
       properties:
         CFBundleDisplayName: '안음 · 시험 앱'
         UILaunchScreen: {}
-        NSMotionUsageDescription: '가족에게 오늘의 활동 여부를 전하기 위해 걸음 수를 확인합니다.'
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [kr.aneum.pilot.refresh]
         NSAppTransportSecurity:
